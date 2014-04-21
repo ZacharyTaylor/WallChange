@@ -1,0 +1,15 @@
+#List of Tags that will be automatically ignored when selecting a wallpaper
+
+#Work safe list
+women
+girl
+blondes
+brunettes
+hair
+outfit
+actress
+models
+asian
+freckles
+doll
+boobs
