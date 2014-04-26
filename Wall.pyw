@@ -2,6 +2,7 @@ import wx
 
 import urllib
 from bs4 import BeautifulSoup
+import re
 
 from random import choice
 
@@ -42,17 +43,17 @@ class SetWallpaper:
 
     def set_next_wallpaper(self):
 
-        wall_base = WallBase()
+        wall_haven = WallHaven()
 
         #loop until wallpaper found
         while True:
-            wall = wall_base.get_next_wall_info()
+            wall = wall_haven.get_next_wall_info()
             if self.check_wallpaper(wall):
                 break
 
 
         #get wallpaper
-        wall = wall_base.get_wall(wall)
+        wall = wall_haven.get_wall(wall)
         wall['name'] = wall['name'].encode('ISO-8859-1', 'ignore')
         urllib.urlretrieve(wall['wallpaper'], self.wall_dir + wall['name'])
 
@@ -69,27 +70,27 @@ class SetWallpaper:
 
 
 
-class WallBase:
+class WallHaven:
     def __init__(self):
 
-        #links used by wallbase
-        self.walls = 'http://wallbase.cc/toplist/'
-        self.wall_options = '?section=wallpapers&q=&res_opt=gteq&res=1920x1080&thpp=32&purity=100&board=2&aspect=1.77&ts=3d'
+        #links used by wallhaven
+        self.walls = 'http://alpha.wallhaven.cc/wallpaper/search'
+        self.wall_options = '?categories=100&purity=100&resolutions=1920x1080&sorting=random&order=desc'
 
         #index of current wallpaper
         self.wall_idx = 0
-        self.walls_per_page = 32
+        self.walls_per_page = 20
 
 
-    #grabs list of wallpaper urls and tags from wallbase
+    #grabs list of wallpaper urls and tags from wallhaven
     def refresh_wall_list(self):
         #get site
-        url = urllib.urlopen(self.walls + str(self.wall_idx) + self.wall_options).read()
+        url = urllib.urlopen(self.walls + self.wall_options).read()
         site = BeautifulSoup(url)
 
         #find wall info
-        urls = site.findAll('a', {'target': '_blank'})
-        tags = site.findAll('div', {'class':'thumbnail purity-0'})
+        urls = site.findAll('a', {'class': 'wall-res'})
+        tags = site.findAll('ul', {'class':'thumb-tags'})
 
         #format tags and url
         self.wall_tags = []
@@ -97,9 +98,13 @@ class WallBase:
 
         for i in range(0,self.walls_per_page):
            self.wall_urls.append(urls[i]['href'])
-           self.wall_tags.append(tags[i]['data-tags'].replace('|',' ').lower())
+           self.wall_tags.append('')
+           for names in tags[i]:
+               if hasattr(names, 'text'):
+                    self.wall_tags[-1] = self.wall_tags[-1] + ' ' + names.text.strip('\n')
+                
 
-    #finds next wallpaper listed on wallbase
+    #finds next wallpaper listed on wallhaven
     def get_next_wall_info(self):
 
         #wallpaper to load 
@@ -122,10 +127,10 @@ class WallBase:
         url = urllib.urlopen(wall['url']).read()
         site = BeautifulSoup(url)
 
-        wall['wallpaper'] = site.find('img', {'class' : 'wall stage1 wide'})['src']
+        wall['wallpaper'] = site.find('img', {'alt' : ''})['src']
 
-        #give wallpaper a valid name        
-        wall['name'] = site.find('meta', attrs={'name':'description'})['content']
+        #give wallpaper a valid name (currently just using tags and id)        
+        wall['name'] = wall['tags']
         wall['name'] = wall['name'] + ' ' + wall['wallpaper'].split('-')[-1]
         keepcharacters = (' ','.','_','-')
         wall['name'] = "".join(c for c in wall['name'] if c.isalnum() or c in keepcharacters).rstrip()
@@ -153,6 +158,9 @@ class BlackList:
 
     #checks if a string of tags contains any blacklisted words
     def check(self, tags):
+        #blank strings automatically fail
+        if not tags:
+            return True
         for b_tag in self.b_list:
             if b_tag in tags:
                 return True
