@@ -89,7 +89,7 @@ class WallHaven:
         site = BeautifulSoup(url)
 
         #find wall info
-        urls = site.findAll('a', {'class': 'wall-res'})
+        urls = site.findAll('a', {'href': re.compile('^http://alpha.wallhaven.cc/wallpaper/\d+')})
         tags = site.findAll('ul', {'class':'thumb-tags'})
 
         #format tags and url
